@@ -1,0 +1,27 @@
+setwd("H:/bibliometrics/my publications")
+orig_pubs <- read.csv("final_full_coded_set.csv", stringsAsFactors = FALSE)
+writeLines(orig_pubs$id, con = "plos_dois.txt")
+## tried to upload dois to web interface of InCites and then download results as .csv
+## had a problem uploading dois, so I downloaded all Plos One papers from 2014-2016 instead
+plos <- read.csv("plos_inCites.csv", stringsAsFactors = FALSE)
+pubs <- merge(orig_pubs, plos, by.x = "id", by.y = "DOI") ## 47569 of 47593 original pubs
+write.csv(pubs, file = "plos_plusInCites.csv", row.names = FALSE)
+rm(orig_pubs, plos)
+library(plyr)
+catSum <- ddply(pubs, .(statement_category), summarise, num_pubs = length(id), mean_cnci = mean(Category.Normalized.Citation.Impact, na.rm = TRUE), mean_percentile = mean(Percentile.in.Subject.Area, na.rm = TRUE), n_top10 = length(Percentile.in.Subject.Area[Percentile.in.Subject.Area <= 10]))
+catSum$perc_top10 <- with(catSum, n_top10 / num_pubs)
+catSum
+sum(catSum$n_top10) / sum(catSum$num_pubs) ## overall: 0.08488722
+write.csv(catSum, file = "summary_by_statementCategory.csv", row.names = FALSE)
+summary(pubs)
+cat_area_sum <- ddply(pubs, .(statement_category, Research.Area), summarise, num_pubs = length(id), mean_cnci = mean(Category.Normalized.Citation.Impact, na.rm = TRUE), mean_percentile = mean(Percentile.in.Subject.Area, na.rm = TRUE), n_top10 = length(Percentile.in.Subject.Area[Percentile.in.Subject.Area <= 10]))
+cat_area_sum$perc_top10 <- with(cat_area_sum, n_top10 / num_pubs)
+write.csv(cat_area_sum, file = "summary_by_statement_and_subject.csv", row.names = FALSE)
+cat_subj_perc <- data.table::dcast(cat_area_sum, Research.Area ~ statement_category, value.var = "perc_top10")
+write.csv(cat_subj_perc, file = "subject_top10.csv", row.names = FALSE)
+cat_subj_cnci <- data.table::dcast(cat_area_sum, Research.Area ~ statement_category, value.var = "mean_cnci")
+write.csv(cat_subj_cnci, file = "subject_cnci.csv", row.names = FALSE)
+subjSum <- ddply(pubs, .(Research.Area), summarise, num_pubs = length(id), mean_cnci = mean(Category.Normalized.Citation.Impact, na.rm = TRUE), mean_percentile = mean(Percentile.in.Subject.Area, na.rm = TRUE), n_top10 = length(Percentile.in.Subject.Area[Percentile.in.Subject.Area <= 10]))
+subjSum$perc_top10 <- with(subjSum, n_top10 / num_pubs)
+subjSum
+write.csv(subjSum, file = "summary_by_subject.csv", row.names = FALSE)
